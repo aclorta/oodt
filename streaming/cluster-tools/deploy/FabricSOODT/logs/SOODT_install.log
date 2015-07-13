@@ -1,25 +1,19 @@
-
-
 Running SOODT install application across cluster
 
-Reading configuration file../configs/config.ini
+Reading configuration file: ../configs/config.ini
 
-kafka_2.10-0.8.2.1.tgz already exists at /home/jwyngaard/.local/,skipping download stage.
+Downloading kafka to /home/alorta/.local/
 
-Application kafka to be extracted from kafka_2.10-0.8.2.1.tgz to /home/jwyngaard/.local/
+Application kafka to be extracted from kafka_2.10-0.8.2.1.tgz to /home/alorta/.local/
 
-Finished extraction with code: 2
+Finished extraction with code: 0
 
 Not building kafka
 
-Reading Kafka configuration file
+Transferring Kafka Files
 
-Transfering Kafka Files
+Transferring Zookeeper configs
 
-Transfering Zookeeper confis
-
-Transfering Kafka confis
-
-CHMODDING
+Transferring Kafka configs
 
 Finished

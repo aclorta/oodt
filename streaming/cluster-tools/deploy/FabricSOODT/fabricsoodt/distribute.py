@@ -5,7 +5,6 @@ from fabric.contrib.files import exists, append
 
 def ulimitCheck ():
 	""" Check ulimit on all nodes and raises it if necessary """
-
 	with settings(warn_only=True):
 		ret = run("ulimit -u")
 		
@@ -73,7 +72,7 @@ def dependanciesCheck (ToQuery, dist):
 def remoteSetVar(var):
 	""" Appends 'export var' to ~/.bash_profile """
 	with settings(warn_only=True):
-		ret=run('echo export"' + var + '" >> ~/.bash_profile')
+		ret=run('echo export"' + var + '">> ~/.bash_profile')
 	if ret.failed and not confirm ("Something went wrong, message: " +str(ret) + " Continue anyways? "):
 		abort("Aborting at user request")
 

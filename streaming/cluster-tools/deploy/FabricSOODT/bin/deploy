@@ -1,25 +1,26 @@
 #!/bin/bash
 #Run as:  ./deploy < config file > < option > < option parameter >
-#Eg: ./bin/deploy ./configs/config.ini install
+#Example: ./deploy ../configs/config.ini install
 
-#	options: install, rebuild, clean, start
-#	rebuild takes a parameter specifying which package should be rebuild: mesos or oodt curently supported
+#options: install, rebuild, clean, start
+#The rebuild option takes a parameter which specifies the package to be
+#rebuilt. mesos and oodt are curently supported for this option.
 
 #Check correct calling
-if	[[ ! -a "$1" ]]; then
+if [[ ! -a "$1" ]]; then
 	echo "Config file specified does not exist"
 	echo "usage:  < config file > < install/rebuild/cleam > < optional rebuild package name >"
 	exit
 elif [[ -z "$2" ]]; then
-	echo "Invalid option, please select on of: install/rebuild/clean"
+	echo "Invalid option, please select one of: install/rebuild/clean"
 	echo "usage:  < config file > < install/rebuild/cleam > < optional rebuild package name >"
 	exit
 elif [[ $3 && "$3" != "mesos" && "$3" != "oodt" ]]; then
-	echo "Unknown package selected for rebuild, available packages are: mesos, oodt"
-	echo "This is $3: ", $3
+	echo "Unknown package selected for rebuild, current available packages are: mesos, oodt"
+	echo "Selected package: $3"
 	echo "usage:  < config file > < install/rebuild/cleam > < optional rebuild package name >"
 else
-	echo "Executing with: ", $1, $2, $3
+	echo "Executing with: ./deploy" $1 $2 $3
 fi
 
 #Check >=python 2.5 with pip is installed else exit
@@ -41,6 +42,9 @@ if [[ ":$PATH:" == *"$HOME/.local/:"* ]]; then
 	export PATH=$HOME/.local/lib:$PATH
 fi
 
+#Launch main.py with appropriate options as specified by the user
+#main.py is responsible for handling the deployment of OODT across
+#a heterogenous cluster
 if [[ $2 == "install" ]]; then
 		python ../main.py $1
 	#	python ../fabricsoodt/main.py $1
@@ -51,10 +55,10 @@ elif [[ $2 == "rebuild" ]]; then
 	#	python ../fabricsoodt/main.py $1 $3
 
 elif [[ $2 == "uninstall" ]]; then
-	echo "STILL  TO WRITE LOGGING and CLEANUP script"
+	echo "STILL TO WRITE LOGGING and CLEANUP script"
 
 else
-	echo "Bad options"
+	echo "Invalid option, please select one of: install/rebuild/clean"
 fi
 
 #python ../fabricsoodt/main.py $1	--Later add that the config file must be specified and have a help message output if the config file is not given

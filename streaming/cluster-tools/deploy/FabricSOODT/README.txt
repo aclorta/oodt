@@ -12,8 +12,10 @@ DEPENDANCIES
 ------------
 Python 2.5-2.7
 Python pip
+fabric
+pystache
+scala
 maven 2.x+
-
 openjdk-7-jdk
 Oracle Java 8
 
