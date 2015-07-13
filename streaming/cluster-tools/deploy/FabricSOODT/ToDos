@@ -1,0 +1,24 @@
+- How to use your own zookeeprer (instead of the kafka one)
+- Convert original os. and subprocess calls to Fabric calls
+- Convert failure handling to use fabric abort? 
+- Enable parallel configuration of nodes to download and build operation
+- Somethig wronge with __init__ file - not installing fabric etc and so duplicated in main - fix
+- Python and pip install on different OSes?
+- Double check vars:
+	- export PATH=$PATH:/home/03544/tg828436/apache-maven-3.3.3/bin
+	- export M2_HOME=/home/03544/tg828436/apache-maven-3.3.3 
+pip:
+	Centos7: 	sudo yum install epel-release
+
+	Cenos06: 	sudo rpm -ivh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+	
+	Centos05:	sudo rpm -ivh http://dl.fedoraproject.org/pub/epel/5/x86_64/epel-release-5-4.noarch.rpm
+
+	sudo yum install -y python-pip
+	
+
+	Ubuntu/debian:
+	sudo apt-get update
+	sudo apt-get install python-pip
+
+Threaaded install
