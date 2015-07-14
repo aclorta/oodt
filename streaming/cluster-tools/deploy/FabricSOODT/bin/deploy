@@ -9,7 +9,7 @@
 #Check correct calling
 if [[ ! -a "$1" ]]; then
 	echo "Config file specified does not exist"
-	echo "usage:  < config file > < install/rebuild/cleam > < optional rebuild package name >"
+	echo "usage:  < config file > < install/rebuild/clean > < optional rebuild package name >"
 	exit
 elif [[ -z "$2" ]]; then
 	echo "Invalid option, please select one of: install/rebuild/clean"

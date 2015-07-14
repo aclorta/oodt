@@ -12,7 +12,7 @@ def getos():
 	dist = platform.linux_distribution()
 	return dist[0].lower()[0:6]
 
-def clean_exit(message,filename = None):
+def clean_exit(message, file = None):
 	""" Exits cleanly, closing filename when supplied """
 	if filename:
 		filename.close()
@@ -67,7 +67,7 @@ def download(url, destination):
         return 0
 
 def dependenciesIn (dist, ToInstall):
-	f = open("../Dependancies.log","w")
+	f = open("../Dependencies.log","w")
 	if dist == 'ubuntu':
 		try:
 			ret = subprocess.call(['sudo', 'apt-get', 'update'])

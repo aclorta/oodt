@@ -1,31 +1,33 @@
+from __future__ import print_function
 """ 
 Python script call all modules and reading the config file to
 deploy an instance of OODT accross a **heterogenous** cluster
 """
 
-#External imports
-import sys,os 
-import pystache
+#Internal imports
+import sys,os,subprocess
 from getpass import getuser
-from fabric.api import env, execute, roles, local, lcd, run
+import logging
+
+#External imports
+try:
+	import pystache
+	import configparser
+	from fabric.api import env, execute, roles, local, lcd, run
+except ImportError, e:
+	print("Error: {0}".format(e)) 
+	return 1
 
 #Package imports
 from fabricsoodt import setup, build, distribute
 from fabricsoodt.ZKConfigClass import ZK
 from fabricsoodt.KSConfigClass import KS
+logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
+log = logging.getLogger(__name__)
 
 def main():
-	f = open("../logs/SOODT_install.log","w")
-	print "\nRunning SOODT install application across cluster"
-	f.write("Running SOODT install application across cluster")
-
-	#Read Configuration
-	if setup.python_uninstalled("configparser"):
-		setup.pip_install("configparser")
-	import configparser
-	
-	print "\nReading configuration file: " + str(sys.argv[1])
-	f.write("\n\nReading configuration file: " + str(sys.argv[1]))
+	log.info('Starting SOODT deploy')
+	log.info("Reading configuration file: {0}".format(sys.argv[1]))
 
 	config = configparser.ConfigParser()
 	config.read(str(sys.argv[1]))
@@ -33,18 +35,9 @@ def main():
 	SUDO = CONFIGS.getboolean('sudo')
 	USER = CONFIGS['user']
 	NODES = [node.strip() for node in CONFIGS['nodes'].split(',')]
-	#nodes = CONFIGS['nodes'].split(',')
-	#NODES=[]
-	#for i in nodes: NODES.append(i.strip())
 
 	#Get a download and install location	
-	if CONFIGS.getboolean('localInstall'):
-		destination = CONFIGS['destination']
-	else:
-		try:
-			destination = os.mkdir(os.path.expanduser("~")+"/SOODT_Build_Area")
-		except Exception:
-			pass
+	destination = getDestination(CONFIGS)
 
 	#Download and untar each application, building if necessary too
 	appnames = dict() 
@@ -59,28 +52,22 @@ def main():
 		#Try downloading up to 3 times
 		for i in range(1,4):
 			if os.path.isfile(destination + name):
-				print "\n" +name + " already exists, skipping download stage."
-				f.write("\n\n" +name + " already exists at " + destination + ", skipping download stage.")
+				log.info("{0} already exists, skipping download stage.".format(name))
 				break
 			else:
-				print "\nDownloading " + app + " to " + destination
-				f.write("\n\nDownloading " + app + " to " + destination)
+				log.info("Downloading {0} to {1}".format(app, destination))
 				ret = setup.download(url, destination)
 				if ret: 
 					break
 				else:
-					print "\nFailed to download, trying again, {} attempts".format(i)
-					f.write("\n\nFailed to download, trying again, {} attempts".format(i))
+					log.info("Failed to download, trying again, {0} attempts".format(i))
 
 		#Extract, and if necessary build, applications
-		print "\nApplication "+ app + " to be extracted from " + name + " to " + destination 
-		f.write ("\n\nApplication "+ app + " to be extracted from " + name + " to " + destination)
-	
+		log.info("Application {0} to be extracted from {1} to {2}".format(app, name, destination)) 
 		ret = build.extract(fullname, destination)
-		print "Finished extraction with code: ", ret
-		f.write("\n\nFinished extraction with code: " + str(ret))
+		log.info("Finished extraction with code: {0}".format(ret))
 
-		msg = [0,"Not building " + app]
+		msg = [0, "Not building {0}".format(app)]
 		if config[app].getboolean('build'):
 			try:
 				sys.argv[2]
@@ -90,57 +77,55 @@ def main():
 				rebuild = True
 
 			if rebuild == False:	#Not a rebuild, continue with install
-				print "\nApplication " + app + " to be built"
-				f.write("\n\nApplication " + app + " to be built")
+				log.info("Application {0} to be built".format(app))
 				try:
 					msg = build.build(app,fullname,SUDO, config[app].getboolean('test'))
 				except KeyboardInterrupt:
-					setup.clean_exit("Excited on keyboard interrupt",f)
+					setup.clean_exit("Exited on keyboard interrupt",f)
 
 			elif rebuild == True and sys.argv[2] == app:	#Is a rebuild of this app
-				print "\nApplication "+ app + " to be rebuild"
-				f.write("\n\nApplication "+ app + " to be rebuild. process will exit on completion")
+				print("Application {0} to be rebuilt".format(app))
 				try:
 					msg = build.build(app,fullname,SUDO, config[app].getboolean('test'))
 				except KeyboardInterrupt:
 					setup.clean_exit("Excited on keyboard interrupt",f)
-				f.write("\n\nCompleted attampt at a rebuild of "+app)
-				f.close()
-				sys.exit("\n\nCompleted attampt at a rebuild of "+app)
+				log.info("Completed attampt at a rebuild of {0}".format(app))
+				sys.exit("\n\nCompleted attampt at a rebuild of {0}".format(app))
 
 			else:	#A rebuild has been requested but not of this app, continue
 				continue
 
 		if msg[0]==0:	
-			print "\n\n"+msg[1]
-			f.write("\n\n"+msg[1])
+			print("\n\n"+msg[1])
 		else:
-			print "\n\n"+msg[1]
-			f.write("\n\n"+msg[1])
-			setup.clean_exit(msg[1],f)
+			print("\n\n"+msg[1])
+			setup.clean_exit(msg[1])
 
 
 	#Distribute and configure
 	dist = setup.getos()
 	render=pystache.Renderer()
-	env.roledefs = {'head':['localhost'], 'nodes':NODES} #Move to top of file when restructure above to use fabric instead of os and subprocess calls
+	#Move to top of file when restructure in order to use fabric instead of os and subprocess calls
+	env.roledefs = {'head':['localhost'], 'nodes':NODES}
 	env.colorize_error = True
 	env.user = USER 
+
+	'''
+	The following, commented-out code is for Mesos.
+
 	#Dependancies required excluding those required only for building specific applications
 	ToQuery = [['subversion',1]]
-
-	''' The following, commented-out code is for Mesos.
-	    We may need to use a different program to configure
-	    ulimit, as the ulimit program is depracated.
 	#Check ulimit -u is above 4096
 	execute(distribute.ulimitCheck,roles=['nodes'])
 	#Check env variables are set:
 	execute(distribute.variablesCheck,roles=['nodes'])
-#	#Check all required dependancies are installed
-#	missing = execute(distribute.dependanciesCheck,ToQuery,dist,roles=['nodes'])
-#	if filter(lambda d: d !="",missing.values()):
-#		f.write("The following dependancies are missing on the deploy nodes, please install and re-runi: "+str(missing))
-#		setup.clean_exit("The following dependancies are missing on the deploy nodes, please install and re-run: "+str(missing),f)
+	#Check all required dependancies are installed
+	#missing = execute(distribute.dependanciesCheck,ToQuery,dist,roles=['nodes'])
+	"""
+	if filter(lambda d: d !="",missing.values()):
+		f.write("The following dependancies are missing on the deploy nodes, please install and re-runi: "+str(missing))
+		setup.clean_exit("The following dependancies are missing on the deploy nodes, please install and re-run: "+str(missing),f)
+	"""
 	'''
 
 	#Distribute Kafka
@@ -148,13 +133,12 @@ def main():
 		#Read config file for kafka broker cluster settings
 		pwd = local("pwd")
 		Knodes = config['kafka']['nodes'].split(',')
-		KNODES=[]
-		for i in Knodes: KNODES.append(i.strip(" "))
-		kservers = len(KNODES)
-		print ("number of kservers: ",kservers)
-		ZDIR=config['kafka']['ZookeeperDataDir'].strip()
-		KDIR=config['kafka']['LogsDir'].strip()
-		zport=config['kafka']['zport'].strip()
+		KNODES = [knode.strip(" ") for knode in Knodes]
+		print("number of kservers: ", len(KNODES))
+		print("list of kservers: ", KNODES)
+		ZDIR = config['kafka']['ZookeeperDataDir'].strip()
+		KDIR = config['kafka']['LogsDir'].strip()
+		zport = config['kafka']['zport'].strip()
 		#Set $K_HOME remotely
 		K_HOME = appnames['kafka'][:-4]+"/"
 		execute(distribute.remoteSetVar,"K_HOME="+K_HOME,hosts=KNODES)
@@ -166,12 +150,10 @@ def main():
 			execute(distribute.ExistsCreate, KDIR, hosts=inode)
 		
 		#Transfer kafka files
-		print "Transferring Kafka Files"
-		f.write("\n\nTransferring Kafka Files")
-		execute(distribute.transfer, K_HOME , destination ,hosts=KNODES)
-		#execute(distribute.transfer, appnames['kafka'][:-4] , destination ,hosts=KNODES)
-		execute(distribute.chmodFolder,K_HOME+"/bin/",hosts=KNODES) #Add execution permissions to Kafka binaries
-
+		log.info("Transferring Kafka Files")
+		execute(distribute.transfer, K_HOME, destination, hosts=KNODES)
+		#Add execution permissions to Kafka binaries
+		execute(distribute.chmodFolder, K_HOME + "bin/", hosts=KNODES)
 		#Setup Zookeeper config file
 		zk=ZK(ZDIR,KNODES,zport)
 		zookeeperProperties = open("../templates/zookeeper.properties",'w')
@@ -179,16 +161,17 @@ def main():
 		zookeeperProperties.close()
 
 		#Distribute Zookeeper Config:
-		print "Transferring Zookeeper configs"
-		f.write("\n\nTransferring Zookeeper configs")
+		log.info("Transferring Zookeeper configs")
 		for inode, server in zip(KNODES, range(len(KNODES))):
-			execute(distribute.transfer, pwd+"../templates/zookeeper.properties" , K_HOME+"config/zookeeper.properties" ,hosts=inode)#Push config file
-			local("echo "+str(server)+" > ../templates/myid")#Create myid file
-			execute(distribute.transfer, pwd+"../templates/myid" , ZDIR ,hosts=inode)#Push myid file
-		
+			#Push config file
+			execute(distribute.transfer, pwd+"../templates/zookeeper.properties" , K_HOME+"config/zookeeper.properties", hosts=inode)
+			#Create myid file
+			local("echo "+str(server)+" > ../templates/myid")
+			#Push myid file
+			execute(distribute.transfer, pwd+"../templates/myid", ZDIR, hosts=inode)
+
 		#Setup and distribute unique Kafka config files
-		print "Transferring Kafka configs"
-		f.write("\n\nTransferring Kafka configs")
+		log.info("Transferring Kafka configs")
 		for knode,k in zip(KNODES,range(len(KNODES))):
 			#Create Kafka server properties file
 			ks=KS(k,knode,KDIR,KNODES,zport)
@@ -202,11 +185,18 @@ def main():
 		#Start Kafka Cluster
 		#distribute.startKafka(KNODES)
 
-#Test installation
+		#Test installation
 
-	print "Finished"
-	f.write("\n\nFinished")
-	f.close()
+		log.info("SOODT deployment completed")
 
-if __name__ == "__main__": main()
+def getDestination(CONFIGS):
+	if CONFIGS.getboolean('localInstall'):
+		return CONFIGS['destination']
+	else:
+		try:
+			return os.mkdir(os.path.expanduser("~")+"/SOODT_Build_Area")
+		except Exception:
+			pass
 
+if __name__ == "__main__":
+	main()

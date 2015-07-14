@@ -14,7 +14,7 @@ def extract (fullname, destination):
 	destination (string): Directory in which the file can be found and where it will be uncompressed to
 
 	Return:
-	Output status of uncomress process, 0 on success.
+	Output status of uncompress process, 0 on success.
 
 	"""
 	

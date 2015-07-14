@@ -19,7 +19,7 @@ def variablesCheck():
 	""" Run bash script check_env.sh that checks JAVA_HOME and M2_HOME are set """
 	with settings(warn_only=True):
 		with lcd ("../bin"):
-			put('check_env.sh','check_env',mode=0755)
+			put('check_env.sh','check_env', use_sudo=False, mode=0755)
 		ret = run('./check_env')
 		run('rm ./check_env')
 	if ret.failed and not confirm ("Something went wrong, message: "+str(ret)+" Continue anyways? "):
@@ -36,7 +36,7 @@ def ExistsCreate(path):
 		return True
 
 def dependanciesCheck (ToQuery, dist):
-	""" Checks depednancies listed in ToInstall are available, uses fabrici, returns missing dependancies"""
+	""" Checks depednancies listed in ToInstall are available, uses fabric, returns missing dependancies"""
 	missing = []
 	err = 0
 	if dist == 'ubuntu':
@@ -72,14 +72,14 @@ def dependanciesCheck (ToQuery, dist):
 def remoteSetVar(var):
 	""" Appends 'export var' to ~/.bash_profile """
 	with settings(warn_only=True):
-		ret=run('echo export"' + var + '">> ~/.bash_profile')
+		ret=run('echo export "' + var + '">> ~/.bash_profile')
 	if ret.failed and not confirm ("Something went wrong, message: " +str(ret) + " Continue anyways? "):
 		abort("Aborting at user request")
 
 def transfer(source,destination):
 	""" Puts source at destination on remote host """
 	with settings(warn_only=True):
-		ret=put(source,destination)
+		ret=put(source,destination, use_sudo=False)
 	if ret.failed and not confirm ("Something went wrong, message: " +str(ret) + " Continue anyways? "):
 		abort("Aborting at user request")
 
@@ -94,6 +94,12 @@ def chmodFolder(folder):
 	if ret.failed and not confirm ("Something went wrong, Continue anyways? "):
 		abort("Aborting at user request")
 
+def chmodFolderToUser(user, folder):
+	with settings(warn_only=True):
+		run("chown " + user + " " + folder)
+		ret=run("chmod -R a+x "+folder)
+	if ret.failed and not confirm ("Something went wrong, Continue anyways? "):
+		abort("Aborting at user request")
 
 ####### Kafka deployment functions ######
 #def distributeKafka(location, destination):

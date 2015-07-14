@@ -26,7 +26,3 @@ if setup.python_uninstalled("configparser"):
 
 if setup.python_uninstalled("pystache"):
 	setup.pip_install("pystache")
-
-
-
-
